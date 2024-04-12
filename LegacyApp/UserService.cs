@@ -15,6 +15,7 @@ namespace LegacyApp
 
             var clientRepository = new ClientRepository();
             var client = clientRepository.GetById(clientId);
+            var userCreditService = new UserCreditService();
 
             var user = new User
             {
@@ -23,20 +24,12 @@ namespace LegacyApp
                 EmailAddress = email,
                 FirstName = firstName,
                 LastName = lastName,
-                HasCreditLimit = true
+                HasCreditLimit = !(client.Type == "VeryImportantClient"),
+                CreditLimit = userCreditService.GetCreditLimit(user.LastName, user.DateOfBirth)
 
             };
 
-            using (var userCreditService = new UserCreditService())
-            {
-                user.CreditLimit = userCreditService.GetCreditLimit(user.LastName, user.DateOfBirth);
-            }
-
-            if (client.Type == "VeryImportantClient")
-            {
-                user.HasCreditLimit = false;
-            }
-            else if (client.Type == "ImportantClient")
+            if (client.Type == "ImportantClient")
             {
                 user.HasCreditLimit *= 2;
             }
