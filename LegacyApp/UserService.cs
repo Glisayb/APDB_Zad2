@@ -4,23 +4,11 @@ namespace LegacyApp
 {
     public class UserService
     {
+        static DateTime limit = DateTime.Now.addYears(-21);
         public bool AddUser(string firstName, string lastName, string email, DateTime dateOfBirth, int clientId)
         {
-            if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName))
-            {
-                return false;
-            }
 
-            if (!email.Contains("@") && !email.Contains("."))
-            {
-                return false;
-            }
-
-            var now = DateTime.Now;
-            int age = now.Year - dateOfBirth.Year;
-            if (now.Month < dateOfBirth.Month || (now.Month == dateOfBirth.Month && now.Day < dateOfBirth.Day)) age--;
-
-            if (age < 21)
+            if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName) || (!email.Contains("@") && !email.Contains(".")) || dateOfBirth > limit)
             {
                 return false;
             }
@@ -34,30 +22,23 @@ namespace LegacyApp
                 DateOfBirth = dateOfBirth,
                 EmailAddress = email,
                 FirstName = firstName,
-                LastName = lastName
+                LastName = lastName,
+                HasCreditLimit = true
+
             };
-            
+
+            using (var userCreditService = new UserCreditService())
+            {
+                user.CreditLimit = userCreditService.GetCreditLimit(user.LastName, user.DateOfBirth);
+            }
+
             if (client.Type == "VeryImportantClient")
             {
                 user.HasCreditLimit = false;
             }
             else if (client.Type == "ImportantClient")
             {
-                using (var userCreditService = new UserCreditService())
-                {
-                    int creditLimit = userCreditService.GetCreditLimit(user.LastName, user.DateOfBirth);
-                    creditLimit = creditLimit * 2;
-                    user.CreditLimit = creditLimit;
-                }
-            }
-            else
-            {
-                user.HasCreditLimit = true;
-                using (var userCreditService = new UserCreditService())
-                {
-                    int creditLimit = userCreditService.GetCreditLimit(user.LastName, user.DateOfBirth);
-                    user.CreditLimit = creditLimit;
-                }
+                user.HasCreditLimit *= 2;
             }
             
             if (user.HasCreditLimit && user.CreditLimit < 500)
